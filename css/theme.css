@@ -1,0 +1,156 @@
+/* Kutumb Nirnay — design tokens.
+   Type stack carried over from the Viatica prototype for family resemblance. */
+
+:root {
+  /* ---- Type ---------------------------------------------------------- */
+  --display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
+             Georgia, 'Times New Roman', serif;
+  --ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter,
+        Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --indic: 'Noto Sans Devanagari', 'Noto Sans Kannada', 'Noto Sans Tamil',
+           'Nirmala UI', sans-serif;
+
+  /* ---- Surface ------------------------------------------------------- */
+  --paper:      #f7f4ee;
+  --paper-2:    #fffdf8;
+  --paper-sunk: #efeae1;
+  --rule:       #ded6c8;
+  --rule-soft:  #e8e2d6;
+
+  /* ---- Ink ----------------------------------------------------------- */
+  --ink:    #23201c;
+  --ink-2:  #4a443c;
+  --ink-3:  #7a7064;
+  --ink-4:  #a79c8c;
+
+  /* ---- Accents ------------------------------------------------------- */
+  --indigo:     #2d3f6b;   /* parent voice  */
+  --indigo-sft: #e5e9f2;
+  --saffron:    #b5651d;   /* student voice */
+  --saffron-sft:#f6e9db;
+  --teal:       #2b6b60;   /* agreement / positive */
+  --teal-sft:   #e0efeb;
+  --clay:       #9c3f34;   /* risk / concern */
+  --clay-sft:   #f6e4e1;
+  --brass:      #8a7430;
+  --brass-sft:  #f2ecd9;
+
+  /* ---- Geometry ------------------------------------------------------ */
+  --r-sm: 6px;
+  --r:    10px;
+  --r-lg: 16px;
+  --gut:  clamp(16px, 4vw, 40px);
+  --maxw: 1180px;
+
+  /* ---- Motion -------------------------------------------------------- */
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --t:    .34s var(--ease);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: .002em;
+  color: var(--ink);
+}
+h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.08; }
+h2 { font-size: clamp(22px, 3vw, 31px); line-height: 1.16; }
+h3 { font-size: 19px; line-height: 1.25; }
+h4 { font-size: 16px; line-height: 1.3; }
+
+p { margin: 0 0 1em; }
+a { color: var(--indigo); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+}
+.script { font-family: var(--indic); }
+
+.eyebrow {
+  font-family: var(--ui);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.lede {
+  font-family: var(--display);
+  font-size: clamp(17px, 2.1vw, 21px);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ---- Primitives ------------------------------------------------------ */
+.card {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 20px;
+}
+
+.btn {
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 560;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper-2);
+  cursor: pointer;
+  transition: transform var(--t), opacity var(--t), background var(--t);
+}
+.btn:hover { transform: translateY(-1px); opacity: .9; }
+.btn:active { transform: translateY(0); }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.ghost:hover { background: var(--paper-sunk); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px;
+  background: var(--paper-sunk); color: var(--ink-2);
+  border: 1px solid var(--rule-soft);
+}
+.pill.student { background: var(--saffron-sft); color: var(--saffron); border-color: #e8d2b8; }
+.pill.parent  { background: var(--indigo-sft);  color: var(--indigo);  border-color: #ccd4e6; }
+.pill.ok      { background: var(--teal-sft);    color: var(--teal);    border-color: #c4ded8; }
+.pill.warn    { background: var(--clay-sft);    color: var(--clay);    border-color: #ecc9c3; }
+
+.rule { height: 1px; background: var(--rule); border: 0; margin: 0; }
+
+/* simulated-data honesty banner */
+.sim-note {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  background: var(--brass-sft);
+  border: 1px solid #e3d9b8;
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
