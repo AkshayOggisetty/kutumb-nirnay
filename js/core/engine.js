@@ -29,7 +29,7 @@ const MODES = [
   { max: 30,   mode: 'City bus',         kmph: 22,   cost: k => Math.round(8 + k * 1.6), daily: true  },
   { max: 70,   mode: 'State bus',        kmph: 34,   cost: k => Math.round(12 + k * 1.3), daily: false },
   { max: 200,  mode: 'Train / state bus',kmph: 45,   cost: k => Math.round(20 + k * 0.9), daily: false },
-  { max: Infinity, mode: 'Train — hostel advised', kmph: 55, cost: k => Math.round(30 + k * 0.7), daily: false }
+  { max: Infinity, mode: 'Train, hostel advised', kmph: 55, cost: k => Math.round(30 + k * 0.7), daily: false }
 ];
 
 export function travelFor(straightKm) {
@@ -51,7 +51,7 @@ export function travelFor(straightKm) {
 
 /* The central reframing: a family is not choosing a career, it is making a
  * household financial decision under uncertainty. This models the household's
- * net position month by month — fees out, stipend and wages in — rather than
+ * net position month by month, fees out, stipend and wages in, rather than
  * quoting a salary figure that arrives at an unspecified time.
  *
  * Returns a month-indexed series up to `horizon` months.
@@ -80,7 +80,7 @@ export function cashflow(path, { horizon = 48, wagePoint = 'mid' } = {}) {
       inflow += path.stipendMonthly;
     }
 
-    /* Wage begins after the course ends, discounted by placement probability —
+    /* Wage begins after the course ends, discounted by placement probability , 
        the expected value a household should actually plan against, not the
        best case. */
     if (m > path.months) {
@@ -148,7 +148,7 @@ export const inrShort = n => {
 };
 
 export const months = n =>
-  n == null ? '—'
+  n == null ? ', '
   : n < 12   ? `${n} months`
   : n % 12 === 0 ? `${n / 12} year${n > 12 ? 's' : ''}`
   : `${Math.floor(n / 12)}y ${n % 12}m`;

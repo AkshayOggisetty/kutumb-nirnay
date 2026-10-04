@@ -1,7 +1,7 @@
 /* Inline SVG charts.
  *
  * Series palette validated with the dataviz six-checks against the parchment
- * surface: #c2701c (vocational) / #3f62c4 (degree) — lightness band PASS,
+ * surface: #c2701c (vocational) / #3f62c4 (degree), lightness band PASS,
  * chroma floor PASS, CVD separation ΔE 26.8 protan / 26.2 tritan, normal-vision
  * ΔE 30.4, contrast >= 3:1. Magnitude charts use a single hue, not the
  * categorical pair, because they encode amount rather than identity.
@@ -58,7 +58,7 @@ export function cashflowChart(host, cmp, labelA, labelB) {
     'aria-label': `Cumulative household position, ${labelA} versus ${labelB}, over four years`
   });
 
-  /* grid — recessive */
+  /* grid, recessive */
   const ticks = 5;
   for (let i = 0; i <= ticks; i++) {
     const v = y0 + (y1 - y0) * i / ticks;
@@ -75,7 +75,7 @@ export function cashflowChart(host, cmp, labelA, labelB) {
     svg.appendChild(t);
   }
 
-  /* zero line emphasised — the break-even reference */
+  /* zero line emphasised, the break-even reference */
   if (y0 < 0 && y1 > 0) {
     svg.appendChild(svgEl('line', {
       x1: P.l, x2: W - P.r, y1: Y(0), y2: Y(0),
@@ -83,7 +83,7 @@ export function cashflowChart(host, cmp, labelA, labelB) {
     }));
   }
 
-  /* x axis — years */
+  /* x axis, years */
   for (let m = 12; m <= months; m += 12) {
     const t = svgEl('text', {
       x: X(m), y: H - P.b + 20, 'text-anchor': 'middle',
@@ -103,7 +103,7 @@ export function cashflowChart(host, cmp, labelA, labelB) {
   line(cmp.a.series, SERIES.vocational);
   line(cmp.b.series, SERIES.degree);
 
-  /* crossover marker — the moment the comparison flips */
+  /* crossover marker, the moment the comparison flips */
   if (cmp.crossover) {
     const cx = X(cmp.crossover), cy = Y(cmp.a.at(cmp.crossover));
     svg.appendChild(svgEl('line', {
@@ -120,7 +120,7 @@ export function cashflowChart(host, cmp, labelA, labelB) {
     svg.appendChild(lbl);
   }
 
-  /* direct labels at the series ends — identity without relying on color */
+  /* direct labels at the series ends, identity without relying on color */
   const endLabel = (series, color, text) => {
     const last = series[series.length - 1];
     const t = svgEl('text', {
@@ -178,7 +178,7 @@ export function cashflowChart(host, cmp, labelA, labelB) {
 }
 
 /* ======================================================= magnitude bars */
-/* Single hue — this encodes amount across categories, not identity. */
+/* Single hue, this encodes amount across categories, not identity. */
 export function barsChart(host, rows, { unit = '%', hue = '#8a6a2f', max = null } = {}) {
   host.innerHTML = '';
   host.style.position = 'relative';
@@ -298,7 +298,7 @@ export function gapChart(host, rows) {
 
       bar.addEventListener('mousemove', ev => {
         tip.hidden = false;
-        tip.innerHTML = `<div class="cht-tip-h">${r.label} — ${k ? 'design target' : 'today'}</div>` +
+        tip.innerHTML = `<div class="cht-tip-h">${r.label}, ${k ? 'design target' : 'today'}</div>` +
           `<div class="cht-tip-d">${k ? r.targetNote : r.nowNote}</div>`;
         const hr = host.getBoundingClientRect();
         tip.style.left = Math.min(hr.width - 220, ev.clientX - hr.left + 12) + 'px';

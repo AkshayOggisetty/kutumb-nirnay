@@ -1,0 +1,13 @@
+{
+  "name": "kutumb-nirnay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Career guidance for the whole family, not just the student.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs 8081",
+    "test": "node test/run.mjs http://localhost:8081",
+    "shots": "node test/shots.mjs http://localhost:8081 shots"
+  },
+  "devDependencies": { "puppeteer-core": "^24.0.0" }
+}

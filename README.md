@@ -1,118 +1,109 @@
-# Kutumb Nirnay — prototype
+# Kutumb Nirnay
 
-**Career counselling and decision support for the household — not just the student.**
+**Career guidance for the whole family, not just the student.**
 
-> Kutumb Nirnay counsels the whole family, turning a career argument into a shared,
-> evidence-backed decision.
+Most career advice speaks only to the student. Kutumb Nirnay is built for the household, so
+the person who actually decides can see what a course costs, when the earning starts, how
+often it leads to a job, and which training centres the student can realistically reach.
 
-Vocational education in India does not fail for lack of information. It fails because
-the parent holds the veto and has never been given anything to change their mind with.
-Every career tool on the market speaks to the student. This one speaks to the household.
+**Live:** https://akshayoggisetty.github.io/kutumb-nirnay/
 
 ---
 
-## Run it
+## Run it locally
 
 ```bash
 node server.mjs          # then open http://localhost:8081
 node server.mjs 3000     # or pick a port
 ```
 
-Node 18+. No build step, no `npm install`, no dependencies, no network calls.
-Everything on screen is computed in the browser.
+Node 18 or later. No build step, no install, no dependencies, no network calls. Everything
+is computed in the browser and nothing is uploaded.
 
-**Live:** https://akshayoggisetty.github.io/kutumb-nirnay/
+## Test it
+
+```bash
+npm install                            # puppeteer-core, for the test driver only
+node test/run.mjs http://localhost:8081
+```
+
+60 interaction checks covering every route, every form control, the map, the charts, the
+plan, persistence and the reset path. The run fails if the browser logs any console error.
 
 ---
 
 ## The seven screens
 
-| # | Screen | What it does |
-|---|--------|--------------|
-| 1 | **Home** | The argument: the decision is made at home, so that is where counselling belongs |
-| 2 | **The household** · परिवार | District, income, student stage, and the objection actually being raised |
-| 3 | **Two views** · दो नज़र | One decision rendered twice — what the student wants to know, what the parent wants to know |
-| 4 | **The numbers** · हिसाब | Household cash flow month by month, placement rates, and the gap this project targets |
-| 5 | **Nearby** · नज़दीक | Radial plan of every institute in range with distance, travel mode, journey time and monthly fare |
-| 6 | **Answers** · सवाल | The objection-handling engine, plus verified local alumni |
-| 7 | **The plan** · फ़ैसला | A printable family decision record with concerns named and a review date |
+| Screen | What it does |
+|---|---|
+| **Start** | What the product is for, and a single way in |
+| **Your details** | District, household income, how soon an earner is needed, what the student enjoys |
+| **Explore options** | Eight courses scored out of 100 for this household and sorted by fit |
+| **Compare two** | One decision in a student view and a parent view, plus the household balance over four years |
+| **Find centres** | Every institute in range with distance, travel mode, journey time and monthly fare |
+| **Family concerns** | The questions raised at home, each with an evidence based answer |
+| **Your plan** | A printable decision record with signature lines and a review date |
 
-Any screen is directly linkable: `#/numbers`, `#/nearby`, `#/plan`.
+Any screen is directly linkable: `#/explore`, `#/centres`, `#/plan`.
 
 ---
 
-## What is genuinely implemented
+## What is computed, and what is illustrative
 
-| Real | Seeded for demonstration |
-|------|--------------------------|
-| Haversine distance with a 1.3 road-detour factor | Centre names, seat counts and fees |
-| Travel-mode, journey-time and fare inference across seven bands | Wage bands and placement rates |
-| Household cash-flow model — fees out, stipend and wages in, discounted by placement probability | Alumni outcome records |
-| Break-even and crossover detection between two paths | District demand labels |
-| Browser geolocation with graceful fallback | — |
-| All SVG charts, drawn from the computed series | — |
-| Radial map projection from real coordinates | — |
+| Computed in the browser | Illustrative content |
+|---|---|
+| Haversine distance with a 1.3 road factor | Wage bands and placement rates |
+| Travel mode, journey time and fare across seven bands | Institute records, seats and fees |
+| Household cash flow, fees out against placement weighted wages in | Local outcome records |
+| Break even month and crossover between two routes | |
+| Course match scoring against interests, budget and urgency | |
+| Every chart, drawn from the computed series | |
 
-Every seeded figure is labelled as such on screen. Nothing is presented as measured fact.
-
-**Centre coordinates are real**, so distance and travel arithmetic behave correctly
-during a demo even though the records themselves are illustrative.
+Institute coordinates are real, so distance and travel arithmetic behave correctly. The
+course, wage and centre data is representative while data partnerships are established. The
+production data path is set out in [REPORT.md](REPORT.md), section 4.
 
 ---
 
 ## Design decisions
 
-**The map is drawn, not tiled.** Bearing gives direction, radius gives distance on a
-square-root scale. No tile server, no API key, no network dependency — it works on a
-weak connection and a cheap phone, and it reads clearly on a projector.
+**The map is drawn, not tiled.** Direction comes from the angle, distance from the radius
+on a square root scale. No tile server, no API key, no network dependency, so it opens on a
+weak connection and stays legible on a projector.
 
-**Charts use a validated palette.** The two-series pair `#c2701c` / `#3f62c4` was run
-through a six-check accessibility validator against the parchment surface: lightness
-band, chroma floor, colourblind separation (ΔE 26.8 protan / 26.2 tritan), normal-vision
-separation (ΔE 30.4) and contrast ≥ 3:1 — all pass. Magnitude charts use a single hue
-because they encode amount, not identity.
+**Wages are weighted by placement rate.** A family should plan against the expected case,
+not the best case. A course that places 31 per cent of the time contributes 31 per cent of
+its wage to the projection. This is what keeps the comparison honest in both directions.
 
-**The household is the unit, not the student.** Wages are discounted by each path's
-placement rate, because the figure a family should plan against is the expected one,
-not the best case.
+**The chart palette is validated.** The two series pair was checked against the page surface
+for lightness band, chroma floor, colourblind separation, normal vision separation and
+contrast. It scores 26.8 Delta E under protanopia and 30.4 under normal vision.
 
-**Paper is an output, not a fallback.** The plan screen prints. Parents trust paper,
-and paper travels to the relatives who also get a say.
+**Nothing leaves the device.** No account, no server, no analytics. The profile lives in
+browser storage and the family can clear it at any time.
 
----
-
-## Built against real rails
-
-Recommendations resolve to NSQF levels, NCO occupation codes and NAPS apprenticeships,
-and every path terminates in a real government destination — Skill India Digital Hub,
-Apprenticeship India, the National Career Service, the National Qualifications Register,
-MyScheme and DigiLocker.
-
-Adapter interfaces sit behind every external surface, so moving from seeded data to live
-integration is a configuration change rather than a rewrite. Production data sources:
-PLFS microdata (MoSPI) for earnings by education level, the NCVET Qualification-Pack-to-NCO
-mapping as the join key between courses and occupations, NSDC district skill-gap studies
-for local demand, and the DGT ITI directory for centres.
+**Paper is an output.** The plan screen prints, because paper travels to the relatives who
+also have a say.
 
 ---
 
 ## Layout
 
 ```
-prototype/
-  index.html              entry point
-  server.mjs              dependency-free static server
-  css/
-    theme.css             design tokens — type, surface, ink, accents
-    app.css               shell and screens
-  js/
-    core/engine.js        haversine, travel inference, household cash-flow model
-    data/paths.js         career paths with NSQF levels and NCO codes
-    data/centres.js       institutes at real coordinates
-    data/voices.js        objection-handling content and alumni records
-    ui/charts.js          inline SVG charts with hover layer
-    ui/map.js             the radial "nearby" plate
-    app.js               shell, routing, the seven screens
+index.html              entry point
+server.mjs              dependency free static server
+css/
+  theme.css             design tokens
+  app.css               screens and components
+js/
+  core/engine.js        distance, travel inference, household cash flow model
+  data/paths.js         courses with NSQF levels, NCO codes and match scoring
+  data/centres.js       institutes at real coordinates
+  data/voices.js        family concerns and local outcome records
+  ui/charts.js          inline SVG charts
+  ui/map.js             the centre finder
+  app.js                screens, routing and all interaction
+test/run.mjs            60 interaction checks
 ```
 
 ---
