@@ -12,3 +12,5 @@ package-lock.json
 .env.local
 .env*.local
 .vercel
+.vercel-token
+.vercel-url
