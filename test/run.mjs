@@ -278,6 +278,21 @@ await sleep(350);
 ok('plan works with an empty profile', !!(await page.$('#sheet')));
 
 
+
+/* Is the assistant configured on this target? The suite asserts the correct
+   behaviour either way: a real grounded answer, or a clean degradation. */
+const aiOn = await page.evaluate(async () => {
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode: 'explain', message: 'ping', context: {} })
+    });
+    return r.ok;
+  } catch { return false; }
+});
+console.log(`  assistant configured on this target: ${aiOn ? 'yes' : 'no'}
+`);
+
 /* ------------------------------------ 13. profile drives the map */
 await page.click('.nav-link[data-go="profile"]');
 await sleep(300);
@@ -322,15 +337,28 @@ const suggCount = await page.$$eval('.as-sugg button', ns => ns.length);
 ok('assistant offers suggestions for this screen', suggCount >= 1, String(suggCount));
 
 /* with no key configured it must fail softly, never break the page */
-await page.type('#as-input', 'What will the travel cost us?');
+await page.type('#as-input', 'What will the travel cost us each month?');
 await page.click('#as-send');
-await page.waitForFunction(() => !!document.querySelector('.as-msg.err'), { timeout: 15000 })
-  .catch(() => {});
-const errShown = await page.$('.as-msg.err');
-ok('assistant degrades gracefully with no key', !!errShown);
-const errText = errShown ? await page.evaluate(e => e.textContent, errShown) : '';
-ok('degradation message reassures the rest still works', /still works/i.test(errText), errText.slice(0, 70));
-ok('page still functional after an assistant failure', (await page.$$('.centre-row')).length > 0);
+await page.waitForFunction(
+  () => { const n = document.querySelectorAll('.as-msg.bot'); const last = n[n.length - 1];
+          return last && !last.classList.contains('wait'); },
+  { timeout: 25000 }).catch(() => {});
+const lastMsg = await page.$$eval('.as-msg.bot', ns => {
+  const n = ns[ns.length - 1];
+  return { text: n.textContent, err: n.classList.contains('err') };
+});
+if (aiOn) {
+  ok('assistant returns a grounded answer', !lastMsg.err && lastMsg.text.length > 40,
+     lastMsg.text.slice(0, 70));
+  ok('answer does not invent a figure the context lacks',
+     !/(guarantee|guaranteed|definitely will earn)/i.test(lastMsg.text));
+  ok('answer avoids long dashes', !/[–—]/.test(lastMsg.text));
+} else {
+  ok('assistant degrades gracefully with no key', lastMsg.err);
+  ok('degradation message reassures the rest still works',
+     /still works/i.test(lastMsg.text), lastMsg.text.slice(0, 70));
+}
+ok('page still functional after using the assistant', (await page.$$('.centre-row')).length > 0);
 await page.click('#as-close');
 await sleep(250);
 ok('assistant panel closes', await page.$eval('#as-panel', e => e.hidden));
@@ -350,8 +378,15 @@ await page.waitForFunction(() => {
   return s && !/reading that/i.test(s.textContent);
 }, { timeout: 15000 }).catch(() => {});
 const nlMsg = await page.$eval('#nl-status', e => e.textContent);
-ok('plain language input degrades gracefully with no key',
-   /assistant|fill the form/i.test(nlMsg), nlMsg.slice(0, 70));
+if (aiOn) {
+  ok('plain language input fills the form', /filled in/i.test(nlMsg), nlMsg.slice(0, 80));
+  const got = await page.evaluate(() => JSON.parse(localStorage.getItem('kn.profile.v1')));
+  ok('extracted district reached the profile', /pune/i.test(got.district), got.district);
+  ok('extracted income reached the profile', got.income === 20000, String(got.income));
+} else {
+  ok('plain language input degrades gracefully with no key',
+     /assistant|fill the form/i.test(nlMsg), nlMsg.slice(0, 70));
+}
 
 /* ------------------------------------ 16. plan summary */
 await page.click('.nav-link[data-go="plan"]');
@@ -363,7 +398,15 @@ await page.waitForFunction(() => {
   return n && !n.hidden && !/reading your figures/i.test(n.textContent);
 }, { timeout: 15000 }).catch(() => {});
 const narr = await page.$eval('#plan-narrative', e => e.textContent);
-ok('plan summary degrades gracefully with no key', /assistant|complete without it/i.test(narr), narr.slice(0, 70));
+if (aiOn) {
+  ok('plan summary is written', narr.length > 80, narr.slice(0, 70));
+  ok('plan summary avoids long dashes', !/[–—]/.test(narr));
+  ok('summary also enters the printed sheet',
+     await page.$eval('#sheet-narrative', e => !e.hidden));
+} else {
+  ok('plan summary degrades gracefully with no key',
+     /assistant|complete without it/i.test(narr), narr.slice(0, 70));
+}
 ok('plan sheet still complete after assistant failure', !!(await page.$('.sheet-table tbody tr')));
 
 /* ------------------------------------------------------------ report */

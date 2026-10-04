@@ -175,10 +175,17 @@ export async function ask({ mode = 'concern', message = '', profile, history = [
 /** Plain language profile input. Returns a partial profile, or {}. */
 export async function parseProfile(text, profile) {
   const raw = await ask({ mode: 'parse', message: text, profile });
-  const cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-  let obj;
-  try { obj = JSON.parse(cleaned); } catch { return {}; }
-  if (!obj || typeof obj !== 'object') return {};
+  let obj = null;
+  const attempts = [
+    raw.trim(),
+    raw.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim(),
+    (raw.match(/\{[\s\S]*\}/) || [''])[0]    // first brace block, whatever surrounds it
+  ];
+  for (const a of attempts) {
+    if (!a) continue;
+    try { obj = JSON.parse(a); break; } catch { /* try the next shape */ }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
 
   /* accept only known keys with sane values, never trust the shape blindly */
   const out = {};

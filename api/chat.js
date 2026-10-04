@@ -95,7 +95,7 @@ Omit any key you are not confident about. If nothing can be extracted, reply {}.
 
 /* ----------------------------------------------------------------- Gemini */
 
-async function callGemini(key, model, system, userText) {
+async function callGemini(key, model, system, userText, gen = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -112,7 +112,8 @@ async function callGemini(key, model, system, userText) {
             temperature: 0.4,
             topP: 0.9,
             maxOutputTokens: 700,
-            responseMimeType: 'text/plain'
+            responseMimeType: 'text/plain',
+            ...gen
           },
           safetySettings: [
             'HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH',
@@ -183,6 +184,13 @@ export default async function handler(req, res) {
     ? [process.env.GEMINI_MODEL, ...MODEL_CHAIN]
     : MODEL_CHAIN;
 
+  /* Extraction must come back as parseable JSON, so ask for it explicitly and
+     take the randomness out. Without this the model sometimes answers in prose
+     and the field extraction silently produces nothing. */
+  const gen = mode === 'parse'
+    ? { responseMimeType: 'application/json', temperature: 0, topP: 1, maxOutputTokens: 400 }
+    : {};
+
   /* Round robin across the keys, failing over on rate limits and outages.
      If a model id is rejected outright (404), drop to the next model and start
      the key rotation again. */
@@ -193,7 +201,7 @@ export default async function handler(req, res) {
 
     for (let i = 0; i < keys.length; i++) {
       const idx = (start + i) % keys.length;
-      const out = await callGemini(keys[idx], model, system, userText);
+      const out = await callGemini(keys[idx], model, system, userText, gen);
       if (out.ok) {
         res.setHeader('cache-control', 'no-store');
         return res.status(200).json({ text: out.text, model, keyIndex: idx, attempts: i + 1 });

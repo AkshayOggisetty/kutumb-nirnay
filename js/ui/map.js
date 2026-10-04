@@ -283,10 +283,43 @@ export class CentreFinder {
     me.textContent = 'You';
     svg.appendChild(me);
 
-    list.forEach(c => {
+    /* Place the markers, then push apart any that land on top of each other.
+       Without this, centres in the same town overlap and a click lands on
+       whichever happens to be drawn last. */
+    const MIN_GAP = 30;
+    const pts = list.map(c => {
       const r = scale(c.travel.km);
       const a = c.bearing - Math.PI / 2;
-      const x = C + Math.cos(a) * r, y = C + Math.sin(a) * r;
+      return { c, x: C + Math.cos(a) * r, y: C + Math.sin(a) * r, r, a };
+    });
+    for (let pass = 0; pass < 24; pass++) {
+      let moved = false;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const p = pts[i], q = pts[j];
+          let dx = q.x - p.x, dy = q.y - p.y;
+          let d = Math.hypot(dx, dy);
+          if (d >= MIN_GAP) continue;
+          if (d < 0.01) {                 // exactly coincident, separate along the bearing
+            dx = Math.cos(p.a + 0.6); dy = Math.sin(p.a + 0.6); d = 1;
+          }
+          const push = (MIN_GAP - d) / 2;
+          const ux = dx / d, uy = dy / d;
+          p.x -= ux * push; p.y -= uy * push;
+          q.x += ux * push; q.y += uy * push;
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+    /* keep everything inside the plate */
+    pts.forEach(p => {
+      const dx = p.x - C, dy = p.y - C, d = Math.hypot(dx, dy);
+      const lim = R + 8;
+      if (d > lim) { p.x = C + dx / d * lim; p.y = C + dy / d * lim; }
+    });
+
+    pts.forEach(({ c, x, y }) => {
       const on = this.selected === c.id;
 
       /* the whole group is the hit target, and it is focusable */
@@ -301,10 +334,11 @@ export class CentreFinder {
       g.appendChild(el('line', {
         x1: C, y1: C, x2: x, y2: y,
         stroke: on ? '#c2701c' : '#ded6c8', 'stroke-width': on ? 1.6 : 1,
-        opacity: on ? .9 : .45
+        opacity: on ? .9 : .45,
+        'pointer-events': 'none'
       }));
-      /* generous invisible hit circle so small markers are easy to click */
-      g.appendChild(el('circle', { cx: x, cy: y, r: 18, fill: 'transparent' }));
+      /* the only hit target: generous, so a small marker is easy to tap */
+      g.appendChild(el('circle', { cx: x, cy: y, r: 17, fill: 'transparent', class: 'hit' }));
       g.appendChild(el('circle', {
         cx: x, cy: y, r: on ? 13 : 10,
         fill: on ? '#c2701c' : '#f7f4ee',

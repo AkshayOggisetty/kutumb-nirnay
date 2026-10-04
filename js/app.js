@@ -32,6 +32,7 @@ const defaults = () => ({
 
 let profile = load();
 let finder = null;
+let flash = '';   // one shot status, consumed by the next render
 
 function load() {
   try {
@@ -117,7 +118,7 @@ function vProfile() {
       </label>
       <div class="row">
         <button class="btn sm" id="nl-go">Fill the form from this</button>
-        <span class="hint" id="nl-status"></span>
+        <span class="hint" id="nl-status">${esc(flash)}</span>
       </div>
     </div>
 
@@ -539,6 +540,7 @@ const VIEWS = { start: vStart, profile: vProfile, explore: vExplore, compare: vC
 let current = 'start';
 
 function render(id) {
+  if (id && id !== current) flash = '';
   if (id) current = id;
   if (!VIEWS[current]) current = 'start';
   $('#view').innerHTML = VIEWS[current]();
@@ -578,14 +580,11 @@ function wireNaturalLanguage() {
       } else {
         Object.assign(profile, got);
         save();
-        render();
         const names = { name: 'name', stage: 'stage', district: 'district',
                         income: 'income', urgency: 'timing', interests: 'interests' };
-        const filled = keys.map(k => names[k] || k).join(', ');
-        setTimeout(() => {
-          const s = $('#nl-status');
-          if (s) s.textContent = 'Filled in: ' + filled + '. Check it and change anything that is wrong.';
-        }, 60);
+        flash = 'Filled in: ' + keys.map(k => names[k] || k).join(', ') +
+                '. Check it and change anything that is wrong.';
+        render();            // the view renders the message, so it cannot be raced
       }
     } catch (err) {
       status.textContent = err.code === 'no_key'
