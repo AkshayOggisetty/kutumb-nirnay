@@ -18,9 +18,13 @@ import { cashflow, compare, haversine, travelFor, inr, months } from './engine.j
    the deployment that hosts /api. A static mirror can point elsewhere by adding
    <meta name="kn-api" content="https://...">. */
 const API = (() => {
-  const meta = document.querySelector('meta[name="kn-api"]');
-  const base = meta?.content?.trim();
-  return (base ? base.replace(/\/$/, '') : '') + '/api/chat';
+  const base = document.querySelector('meta[name="kn-api"]')?.content?.trim();
+  if (!base) return '/api/chat';
+  try {
+    /* already being served by the deployment that hosts the function */
+    if (new URL(base).host === location.host) return '/api/chat';
+  } catch { /* malformed, fall through to same origin */ return '/api/chat'; }
+  return base.replace(/\/$/, '') + '/api/chat';
 })();
 
 export const ai = {

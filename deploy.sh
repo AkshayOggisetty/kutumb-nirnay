@@ -36,8 +36,8 @@ echo "found $COUNT key(s) to upload, values not shown"
 
 # ---- link and deploy -----------------------------------------------------
 echo
-echo "linking the project..."
-vercel link --yes --project kutumb-nirnay "${AUTH[@]}" >/dev/null
+echo "linking the project (created on first deploy if absent)..."
+vercel link --yes --project kutumb-nirnay "${AUTH[@]}" >/dev/null 2>&1 ||   echo "  not linked yet, the deploy will create it" 
 
 echo "uploading GEMINI_API_KEYS to production..."
 vercel env rm GEMINI_API_KEYS production --yes "${AUTH[@]}" >/dev/null 2>&1 || true
