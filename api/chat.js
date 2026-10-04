@@ -6,14 +6,24 @@
  * Environment variables:
  *   GEMINI_API_KEYS   comma separated list, rotated round robin
  *   GEMINI_API_KEY    single key, used if the list above is absent
- *   GEMINI_MODEL      optional, defaults to gemini-3.1-flash-lite-preview
+ *   GEMINI_MODEL      optional override, tried before the built in chain
  *
  * Rotation: each request starts at the next key in the pool. If a key returns
  * 429 or a 5xx, the next key is tried, so one exhausted key does not take the
  * demo down.
  */
 
-const DEFAULT_MODEL = 'gemini-3.1-flash-lite-preview';
+/* gemini-3.1-flash-lite is the cheapest model that is not scheduled for
+ * retirement. Gemini 2.5 Flash-Lite is cheaper but retires 16 October 2026,
+ * which falls inside the judging window, so it is deliberately not used.
+ * The list is tried in order, so a retired or renamed id fails over rather
+ * than taking the assistant down. */
+const MODEL_CHAIN = [
+  'gemini-3.1-flash-lite',
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3-flash',
+  'gemini-2.5-flash-lite'
+];
 const MAX_BODY = 24000;          // characters of JSON we will accept
 const TIMEOUT_MS = 20000;
 
@@ -169,21 +179,31 @@ export default async function handler(req, res) {
     (convo ? `EARLIER IN THIS CONVERSATION:\n${convo}\n\n` : '') +
     `THE FAMILY SAYS:\n${message || '(no message, respond to the context)'}`;
 
-  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  const models = process.env.GEMINI_MODEL
+    ? [process.env.GEMINI_MODEL, ...MODEL_CHAIN]
+    : MODEL_CHAIN;
 
-  /* round robin, with failover onto the next key for rate limits and outages */
-  const start = cursor++ % keys.length;
+  /* Round robin across the keys, failing over on rate limits and outages.
+     If a model id is rejected outright (404), drop to the next model and start
+     the key rotation again. */
   let last = null;
-  for (let i = 0; i < keys.length; i++) {
-    const idx = (start + i) % keys.length;
-    const out = await callGemini(keys[idx], model, system, userText);
-    if (out.ok) {
-      res.setHeader('cache-control', 'no-store');
-      return res.status(200).json({ text: out.text, keyIndex: idx, attempts: i + 1 });
+  for (const model of models) {
+    const start = cursor++ % keys.length;
+    let modelRejected = false;
+
+    for (let i = 0; i < keys.length; i++) {
+      const idx = (start + i) % keys.length;
+      const out = await callGemini(keys[idx], model, system, userText);
+      if (out.ok) {
+        res.setHeader('cache-control', 'no-store');
+        return res.status(200).json({ text: out.text, model, keyIndex: idx, attempts: i + 1 });
+      }
+      last = out;
+      if (out.status === 404 || out.status === 400) { modelRejected = true; break; }
+      const retryable = out.status === 429 || out.status >= 500;
+      if (!retryable) break;
     }
-    last = out;
-    const retryable = out.status === 429 || out.status >= 500;
-    if (!retryable) break;
+    if (!modelRejected) break;   // the model was fine, the keys were not
   }
 
   return res.status(502).json({
