@@ -6,3 +6,9 @@ __MACOSX/
 .vercel
 *.local
 package-lock.json
+
+# secrets, never commit
+.env
+.env.local
+.env*.local
+.vercel

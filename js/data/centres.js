@@ -87,3 +87,87 @@ export const CENTRE_TYPE = {
 /* Fallback origin when the browser denies or cannot resolve geolocation.
    Pune, the district used throughout the walkthrough. */
 export const FALLBACK_ORIGIN = { lat: 18.5204, lon: 73.8567, label: 'Pune, Maharashtra' };
+
+/* ---------------------------------------------------------------- districts
+ * Coordinates for resolving a typed district to a map origin. Covers the
+ * districts and cities the seeded centres sit in, plus the larger metros.
+ */
+export const DISTRICTS = [
+  ['pune', 18.5204, 73.8567, 'Pune, Maharashtra'],
+  ['pimpri', 18.6298, 73.7997, 'Pimpri Chinchwad, Maharashtra'],
+  ['baramati', 18.1514, 74.5815, 'Baramati, Maharashtra'],
+  ['khed', 18.8450, 73.8890, 'Khed, Maharashtra'],
+  ['mumbai', 19.0760, 72.8777, 'Mumbai, Maharashtra'],
+  ['thane', 19.1972, 72.9722, 'Thane, Maharashtra'],
+  ['navi mumbai', 19.0330, 73.0297, 'Navi Mumbai, Maharashtra'],
+  ['nashik', 19.9975, 73.7898, 'Nashik, Maharashtra'],
+  ['ahmednagar', 19.0948, 74.7480, 'Ahmednagar, Maharashtra'],
+  ['nagpur', 21.1458, 79.0882, 'Nagpur, Maharashtra'],
+  ['aurangabad', 19.8762, 75.3433, 'Chhatrapati Sambhajinagar, Maharashtra'],
+  ['solapur', 17.6599, 75.9064, 'Solapur, Maharashtra'],
+  ['kolhapur', 16.7050, 74.2433, 'Kolhapur, Maharashtra'],
+  ['bengaluru', 12.9716, 77.5946, 'Bengaluru, Karnataka'],
+  ['bangalore', 12.9716, 77.5946, 'Bengaluru, Karnataka'],
+  ['mysuru', 12.2958, 76.6394, 'Mysuru, Karnataka'],
+  ['mysore', 12.2958, 76.6394, 'Mysuru, Karnataka'],
+  ['hubballi', 15.3647, 75.1240, 'Hubballi, Karnataka'],
+  ['hubli', 15.3647, 75.1240, 'Hubballi, Karnataka'],
+  ['kalaburagi', 17.3297, 76.8343, 'Kalaburagi, Karnataka'],
+  ['belagavi', 15.8497, 74.4977, 'Belagavi, Karnataka'],
+  ['mangaluru', 12.9141, 74.8560, 'Mangaluru, Karnataka'],
+  ['hyderabad', 17.3850, 78.4867, 'Hyderabad, Telangana'],
+  ['secunderabad', 17.4399, 78.4983, 'Secunderabad, Telangana'],
+  ['warangal', 17.9689, 79.5941, 'Warangal, Telangana'],
+  ['delhi', 28.6139, 77.2090, 'Delhi'],
+  ['new delhi', 28.6139, 77.2090, 'Delhi'],
+  ['gurugram', 28.4595, 77.0266, 'Gurugram, Haryana'],
+  ['gurgaon', 28.4595, 77.0266, 'Gurugram, Haryana'],
+  ['noida', 28.5355, 77.3910, 'Noida, Uttar Pradesh'],
+  ['faridabad', 28.4089, 77.3178, 'Faridabad, Haryana'],
+  ['lucknow', 26.8467, 80.9462, 'Lucknow, Uttar Pradesh'],
+  ['kanpur', 26.4499, 80.3319, 'Kanpur, Uttar Pradesh'],
+  ['varanasi', 25.3176, 82.9739, 'Varanasi, Uttar Pradesh'],
+  ['prayagraj', 25.4358, 81.8463, 'Prayagraj, Uttar Pradesh'],
+  ['patna', 25.5941, 85.1376, 'Patna, Bihar'],
+  ['kolkata', 22.5726, 88.3639, 'Kolkata, West Bengal'],
+  ['howrah', 22.5958, 88.2636, 'Howrah, West Bengal'],
+  ['chennai', 13.0827, 80.2707, 'Chennai, Tamil Nadu'],
+  ['coimbatore', 11.0168, 76.9558, 'Coimbatore, Tamil Nadu'],
+  ['madurai', 9.9252, 78.1198, 'Madurai, Tamil Nadu'],
+  ['ahmedabad', 23.0225, 72.5714, 'Ahmedabad, Gujarat'],
+  ['surat', 21.1702, 72.8311, 'Surat, Gujarat'],
+  ['vadodara', 22.3072, 73.1812, 'Vadodara, Gujarat'],
+  ['rajkot', 22.3039, 70.8022, 'Rajkot, Gujarat'],
+  ['jaipur', 26.9124, 75.7873, 'Jaipur, Rajasthan'],
+  ['jodhpur', 26.2389, 73.0243, 'Jodhpur, Rajasthan'],
+  ['indore', 22.7196, 75.8577, 'Indore, Madhya Pradesh'],
+  ['bhopal', 23.2599, 77.4126, 'Bhopal, Madhya Pradesh'],
+  ['kochi', 9.9312, 76.2673, 'Kochi, Kerala'],
+  ['thiruvananthapuram', 8.5241, 76.9366, 'Thiruvananthapuram, Kerala'],
+  ['bhubaneswar', 20.2961, 85.8245, 'Bhubaneswar, Odisha'],
+  ['guwahati', 26.1445, 91.7362, 'Guwahati, Assam'],
+  ['chandigarh', 30.7333, 76.7794, 'Chandigarh'],
+  ['ludhiana', 30.9010, 75.8573, 'Ludhiana, Punjab'],
+  ['dehradun', 30.3165, 78.0322, 'Dehradun, Uttarakhand'],
+  ['ranchi', 23.3441, 85.3096, 'Ranchi, Jharkhand'],
+  ['raipur', 21.2514, 81.6296, 'Raipur, Chhattisgarh'],
+  ['visakhapatnam', 17.6868, 83.2185, 'Visakhapatnam, Andhra Pradesh'],
+  ['vijayawada', 16.5062, 80.6480, 'Vijayawada, Andhra Pradesh']
+];
+
+/* Resolve a typed district string to coordinates. Returns null when nothing
+   matches, so the caller can keep the previous origin. */
+export function resolveDistrict(text) {
+  if (!text) return null;
+  const q = String(text).toLowerCase().trim();
+  if (!q) return null;
+  let hit = DISTRICTS.find(([k]) => q === k);
+  if (!hit) hit = DISTRICTS.find(([k]) => q.startsWith(k) || q.includes(k));
+  if (!hit) {
+    const first = q.split(/[,\s]+/)[0];
+    if (first && first.length > 3) hit = DISTRICTS.find(([k]) => k.startsWith(first));
+  }
+  if (!hit) return null;
+  const [, lat, lon, label] = hit;
+  return { lat, lon, label };
+}

@@ -5,7 +5,7 @@
  * and list rows stay clickable across re-renders.
  */
 
-import { CENTRES, CENTRE_TYPE, FALLBACK_ORIGIN } from '../data/centres.js';
+import { CENTRES, CENTRE_TYPE, FALLBACK_ORIGIN, resolveDistrict } from '../data/centres.js';
 import { byId } from '../data/paths.js';
 import { haversine, travelFor, inr } from '../core/engine.js';
 
@@ -39,12 +39,35 @@ const GLYPH = {
 export class CentreFinder {
   constructor(host, opts = {}) {
     this.host = host;
+    this.profile = opts.profile || null;
     this.origin = { ...FALLBACK_ORIGIN };
+    this.applyProfileOrigin();
     this.filter = opts.filter || 'all';
     this.selected = null;
     this.located = false;
     this.locating = false;
     this._bound = false;
+  }
+
+  /* Centre the map on the district the family typed, unless they have granted
+     live geolocation, which always wins. */
+  applyProfileOrigin() {
+    if (this.located || !this.profile) return;
+    const hit = resolveDistrict(this.profile.district);
+    if (hit) this.origin = hit;
+  }
+
+  /* Courses the family is actually weighing: the shortlist plus the two being
+     compared. Centres offering any of these are marked as relevant. */
+  relevantCourses() {
+    if (!this.profile) return [];
+    return [...new Set([...(this.profile.shortlist || []),
+                        ...(this.profile.compare || [])])];
+  }
+
+  isRelevant(c) {
+    const want = this.relevantCourses();
+    return want.length > 0 && c.trades.some(t => want.includes(t));
   }
 
   async locate() {
@@ -90,7 +113,9 @@ export class CentreFinder {
         const straight = haversine(this.origin, c);
         return { ...c, straight, travel: travelFor(straight), bearing: bearing(this.origin, c) };
       })
-      .filter(c => this.filter === 'all' || c.type === this.filter)
+      .filter(c => this.filter === 'all' ? true
+                 : this.filter === 'mine' ? this.isRelevant(c)
+                 : c.type === this.filter)
       .sort((a, b) => a.straight - b.straight);
   }
 
@@ -165,6 +190,8 @@ export class CentreFinder {
       originEl.innerHTML = `
         <span class="field-label">Showing centres near</span>
         <strong>${this.origin.label}</strong>
+        ${!this.located && this.profile && this.profile.district
+          ? '<p class="hint">Taken from the district in your details.</p>' : ''}
         <button class="btn ghost sm" data-act="locate" ${this.locating ? 'disabled' : ''}>
           ${this.locating ? 'Finding you...' : this.located ? 'Update location' : 'Use my location'}
         </button>
@@ -174,9 +201,14 @@ export class CentreFinder {
 
     const chipsEl = this.host.querySelector('#fx-chips');
     if (chipsEl) {
-      chipsEl.innerHTML = ['all', ...Object.keys(CENTRE_TYPE)].map(t => `
+      const keys = ['all'];
+      if (this.relevantCourses().length) keys.push('mine');
+      keys.push(...Object.keys(CENTRE_TYPE));
+      chipsEl.innerHTML = keys.map(t => `
         <button class="chip${this.filter === t ? ' on' : ''}" data-type="${t}">
-          ${t === 'all' ? 'All centres' : CENTRE_TYPE[t].label}
+          ${t === 'all' ? 'All centres'
+            : t === 'mine' ? 'Offers my courses'
+            : CENTRE_TYPE[t].label}
         </button>`).join('');
     }
 
@@ -194,8 +226,8 @@ export class CentreFinder {
   rowHTML(c) {
     const t = c.travel;
     return `
-      <button class="centre-row${this.selected === c.id ? ' on' : ''}" data-centre="${c.id}">
-        <span class="cr-type">${CENTRE_TYPE[c.type].label}</span>
+      <button class="centre-row${this.selected === c.id ? ' on' : ''}${this.isRelevant(c) ? ' rel' : ''}" data-centre="${c.id}">
+        <span class="cr-type">${CENTRE_TYPE[c.type].label}${this.isRelevant(c) ? ' &middot; offers your course' : ''}</span>
         <span class="cr-name">${c.name}</span>
         <span class="cr-meta"><b class="num">${t.km} km</b> ${t.mode}, ${t.minutes} min</span>
       </button>`;
@@ -282,6 +314,12 @@ export class CentreFinder {
         cx: x, cy: y, r: on ? 13 : 10,
         fill: 'none', stroke: on ? '#c2701c' : '#a79c8c', 'stroke-width': 1.2
       }));
+      if (this.isRelevant(c) && !on) {
+        g.appendChild(el('circle', {
+          cx: x, cy: y, r: 14, fill: 'none', stroke: '#c2701c',
+          'stroke-width': 1.4, 'stroke-dasharray': '3 3', opacity: .85
+        }));
+      }
       g.appendChild(el('path', {
         d: GLYPH[CENTRE_TYPE[c.type].glyph],
         transform: `translate(${x},${y}) scale(${on ? 1.05 : .9})`,
@@ -317,6 +355,7 @@ export class CentreFinder {
         <div>
           <span class="tag">${CENTRE_TYPE[c.type].label}</span>
           <span class="tag ${c.govt ? 'ok' : ''}">${c.govt ? 'Government' : 'Private'}</span>
+          ${this.isRelevant(c) ? '<span class="tag hi">Offers a course you are considering</span>' : ''}
           <h3>${c.name}</h3>
         </div>
         <div class="cd-dist"><b class="num">${t.km}</b><span>km by road</span></div>

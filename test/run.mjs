@@ -27,9 +27,17 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 await page.setViewport({ width: 1440, height: 1000 });
 
-page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+const EXPECTED = /\/api\/chat/;   // the unconfigured assistant is tested on purpose
+page.on('console', m => {
+  if (m.type() !== 'error') return;
+  if (EXPECTED.test(m.text()) || /503|502/.test(m.text())) return;
+  errors.push('console: ' + m.text());
+});
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-page.on('requestfailed', r => errors.push('requestfailed: ' + r.url() + ' ' + r.failure()?.errorText));
+page.on('requestfailed', r => {
+  if (EXPECTED.test(r.url())) return;
+  errors.push('requestfailed: ' + r.url() + ' ' + r.failure()?.errorText);
+});
 
 console.log(`\nTesting ${BASE}\n${'='.repeat(62)}`);
 
@@ -192,7 +200,8 @@ ok('travel mode and fare shown', /min each way/.test(grid) && /one way/.test(gri
 await page.click('[data-type="iti"]');
 await sleep(320);
 const itiRows = await page.$$eval('.cr-type', ns => ns.map(n => n.textContent.trim()));
-ok('centre type filter works', itiRows.length > 0 && itiRows.every(t => t === 'ITI'), itiRows.join(','));
+ok('centre type filter works',
+   itiRows.length > 0 && itiRows.every(t => t.startsWith('ITI')), itiRows.join(','));
 await page.click('[data-type="all"]');
 await sleep(260);
 
@@ -267,6 +276,95 @@ ok('explore works with an empty profile', (await page.$$('.path-card')).length =
 await page.click('.nav-link[data-go="plan"]');
 await sleep(350);
 ok('plan works with an empty profile', !!(await page.$('#sheet')));
+
+
+/* ------------------------------------ 13. profile drives the map */
+await page.click('.nav-link[data-go="profile"]');
+await sleep(300);
+await page.$eval('input[name="district"]', e => { e.value = ''; });
+await page.type('input[name="district"]', 'Nashik');
+await sleep(250);
+await page.click('.nav-link[data-go="centres"]');
+await sleep(600);
+const originLabel = await page.$eval('#fx-origin strong', e => e.textContent.trim());
+ok('map centres on the district typed in the profile', /Nashik/i.test(originLabel), originLabel);
+const nearestNow = await page.$eval('.centre-row .cr-name', e => e.textContent.trim());
+ok('nearest centre changes with the district', /Nashik/i.test(nearestNow), nearestNow);
+
+/* shortlist drives the relevance filter */
+await page.click('.nav-link[data-go="explore"]');
+await sleep(350);
+await page.click('.path-card [data-shortlist]');
+await sleep(300);
+await page.click('.nav-link[data-go="centres"]');
+await sleep(600);
+const hasMine = await page.$('[data-type="mine"]');
+ok('a shortlist adds the "offers my courses" filter', !!hasMine);
+if (hasMine) {
+  await page.click('[data-type="mine"]');
+  await sleep(350);
+  const rows = await page.$$('.centre-row');
+  const allRel = await page.$$eval('.centre-row', ns => ns.every(n => n.classList.contains('rel')));
+  ok('that filter shows only relevant centres', rows.length > 0 && allRel, `${rows.length} rows`);
+  await page.click('[data-type="all"]');
+  await sleep(250);
+}
+const anyRel = await page.$$eval('.centre-row', ns => ns.some(n => n.classList.contains('rel')));
+ok('centres offering a considered course are marked', anyRel);
+
+/* ------------------------------------ 14. the assistant */
+ok('assistant button is mounted', !!(await page.$('#as-fab')));
+await page.click('#as-fab');
+await sleep(350);
+ok('assistant panel opens', await page.$eval('#as-panel', e => !e.hidden));
+ok('assistant greets on first open', (await page.$$('.as-msg.bot')).length >= 1);
+const suggCount = await page.$$eval('.as-sugg button', ns => ns.length);
+ok('assistant offers suggestions for this screen', suggCount >= 1, String(suggCount));
+
+/* with no key configured it must fail softly, never break the page */
+await page.type('#as-input', 'What will the travel cost us?');
+await page.click('#as-send');
+await page.waitForFunction(() => !!document.querySelector('.as-msg.err'), { timeout: 15000 })
+  .catch(() => {});
+const errShown = await page.$('.as-msg.err');
+ok('assistant degrades gracefully with no key', !!errShown);
+const errText = errShown ? await page.evaluate(e => e.textContent, errShown) : '';
+ok('degradation message reassures the rest still works', /still works/i.test(errText), errText.slice(0, 70));
+ok('page still functional after an assistant failure', (await page.$$('.centre-row')).length > 0);
+await page.click('#as-close');
+await sleep(250);
+ok('assistant panel closes', await page.$eval('#as-panel', e => e.hidden));
+
+/* ------------------------------------ 15. plain language intake */
+await page.click('.nav-link[data-go="profile"]');
+await sleep(300);
+ok('plain language box is present', !!(await page.$('#nl-input')));
+await page.click('#nl-go');
+await sleep(400);
+const nlEmpty = await page.$eval('#nl-status', e => e.textContent);
+ok('empty plain language input is handled', /type a sentence/i.test(nlEmpty), nlEmpty);
+await page.type('#nl-input', 'my son finished class 10 in Pune, we earn 20000');
+await page.click('#nl-go');
+await page.waitForFunction(() => {
+  const s = document.querySelector('#nl-status');
+  return s && !/reading that/i.test(s.textContent);
+}, { timeout: 15000 }).catch(() => {});
+const nlMsg = await page.$eval('#nl-status', e => e.textContent);
+ok('plain language input degrades gracefully with no key',
+   /assistant|fill the form/i.test(nlMsg), nlMsg.slice(0, 70));
+
+/* ------------------------------------ 16. plan summary */
+await page.click('.nav-link[data-go="plan"]');
+await sleep(400);
+ok('plan offers an assistant summary', !!(await page.$('#plan-summary')));
+await page.click('#plan-summary');
+await page.waitForFunction(() => {
+  const n = document.querySelector('#plan-narrative');
+  return n && !n.hidden && !/reading your figures/i.test(n.textContent);
+}, { timeout: 15000 }).catch(() => {});
+const narr = await page.$eval('#plan-narrative', e => e.textContent);
+ok('plan summary degrades gracefully with no key', /assistant|complete without it/i.test(narr), narr.slice(0, 70));
+ok('plan sheet still complete after assistant failure', !!(await page.$('.sheet-table tbody tr')));
 
 /* ------------------------------------------------------------ report */
 console.log(results.join('\n'));

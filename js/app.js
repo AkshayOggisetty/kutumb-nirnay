@@ -9,6 +9,8 @@ import { OBJECTIONS, ALUMNI } from './data/voices.js';
 import { cashflow, compare, inr, inrShort, months } from './core/engine.js';
 import { cashflowChart, barsChart, SERIES } from './ui/charts.js';
 import { CentreFinder } from './ui/map.js';
+import { Assistant } from './ui/chat.js';
+import { ask, parseProfile } from './core/ai.js';
 
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -106,6 +108,18 @@ function vProfile() {
     <h2>Tell us about the student and the household</h2>
     <p class="lede">Everything you enter stays on this device. These answers shape the
     options you are shown and the numbers used to compare them.</p>
+
+    <div class="nl-box">
+      <label class="field">
+        <span class="field-label">Describe your situation in your own words</span>
+        <textarea id="nl-input" rows="2" maxlength="500"
+          placeholder="For example: my daughter just finished class 10 in Nashik, we earn around 20 thousand a month, she likes working with her hands"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn sm" id="nl-go">Fill the form from this</button>
+        <span class="hint" id="nl-status"></span>
+      </div>
+    </div>
 
     <form class="form" id="profile-form" autocomplete="off">
       <div class="field-row">
@@ -454,6 +468,8 @@ function vPlan() {
       <h4>Shortlisted</h4>
       <ul class="plain">${picked.map(p => `<li>${p.name}, NSQF ${p.nsqf}, ${p.months} months</li>`).join('')}</ul>` : ''}
 
+      <div id="sheet-narrative" class="sheet-narrative" hidden></div>
+
       <h4>Concerns raised and answered</h4>
       ${chosen.length
         ? `<ul class="plain">${chosen.map(o => `<li><q>${o.says}</q> ${o.answer}</li>`).join('')}</ul>`
@@ -465,6 +481,11 @@ function vPlan() {
         <div><span class="field-label">Review on</span><div class="sig num">${review}</div></div>
       </footer>
     </div>
+
+    <div class="row">
+      <button class="btn ghost" id="plan-summary">Write a summary for us</button>
+    </div>
+    <div id="plan-narrative" class="narrative" hidden></div>
 
     <div class="row">
       <button class="btn" data-act="print">Print or save as PDF</button>
@@ -532,11 +553,77 @@ function render(id) {
 }
 
 function afterRender() {
+  if (current === 'profile') wireNaturalLanguage();
+  if (current === 'plan') wirePlanSummary();
   if (current === 'compare') drawCompare();
   if (current === 'centres') {
-    finder = new CentreFinder($('#finder-host'));
+    finder = new CentreFinder($('#finder-host'), { profile });
     finder.mount();
   }
+}
+
+function wireNaturalLanguage() {
+  const btn = $('#nl-go'), box = $('#nl-input'), status = $('#nl-status');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const text = box.value.trim();
+    if (!text) { status.textContent = 'Type a sentence or two first.'; return; }
+    btn.disabled = true;
+    status.textContent = 'Reading that...';
+    try {
+      const got = await parseProfile(text, profile);
+      const keys = Object.keys(got);
+      if (!keys.length) {
+        status.textContent = 'Could not pick anything out of that. Try mentioning the class, the district and the household income.';
+      } else {
+        Object.assign(profile, got);
+        save();
+        render();
+        const names = { name: 'name', stage: 'stage', district: 'district',
+                        income: 'income', urgency: 'timing', interests: 'interests' };
+        const filled = keys.map(k => names[k] || k).join(', ');
+        setTimeout(() => {
+          const s = $('#nl-status');
+          if (s) s.textContent = 'Filled in: ' + filled + '. Check it and change anything that is wrong.';
+        }, 60);
+      }
+    } catch (err) {
+      status.textContent = err.code === 'no_key'
+        ? 'The assistant is not switched on here. Fill the form below instead.'
+        : 'Could not reach the assistant. Fill the form below instead.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function wirePlanSummary() {
+  const btn = $('#plan-summary');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const host = $('#plan-narrative'), sheet = $('#sheet-narrative');
+    btn.disabled = true;
+    const prev = btn.textContent;
+    btn.textContent = 'Writing...';
+    host.hidden = false;
+    host.textContent = 'Reading your figures...';
+    try {
+      const text = await ask({
+        mode: 'plan',
+        message: 'Write the summary paragraph for this family.',
+        profile
+      });
+      host.textContent = text;
+      if (sheet) { sheet.hidden = false; sheet.innerHTML = '<h4>Summary</h4><p>' + esc(text) + '</p>'; }
+    } catch (err) {
+      host.textContent = err.code === 'no_key'
+        ? 'The assistant is not switched on for this deployment. The plan below is complete without it.'
+        : 'Could not reach the assistant just now. The plan below is complete without it.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
+  });
 }
 
 function drawCompare() {
@@ -685,6 +772,12 @@ function boot() {
   wireGlobal();
   const h = location.hash.replace('#/', '');
   render(VIEWS[h] ? h : 'start');
+
+  const assistant = new Assistant({
+    getProfile: () => profile,
+    getScreen: () => current
+  });
+  assistant.mount();
 }
 
 if (document.readyState === 'loading') {

@@ -44,6 +44,8 @@ plan, persistence and the reset path. The run fails if the browser logs any cons
 | **Family concerns** | The questions raised at home, each with an evidence based answer |
 | **Your plan** | A printable decision record with signature lines and a review date |
 
+An assistant is available on every screen. See [The assistant](#the-assistant) below.
+
 Any screen is directly linkable: `#/explore`, `#/centres`, `#/plan`.
 
 ---
@@ -84,6 +86,78 @@ browser storage and the family can clear it at any time.
 
 **Paper is an output.** The plan screen prints, because paper travels to the relatives who
 also have a say.
+
+---
+
+## The assistant
+
+The problem statement asks for an AI enabled platform, so there is a guidance assistant
+on every screen. It is deliberately constrained.
+
+**It explains, it never calculates.** Every figure it is allowed to say is computed first
+by the engine in `js/core/engine.js` and packed into a context object by
+`js/core/ai.js`. The system prompt forbids inventing a fee, a wage, a placement rate or a
+distance, and instructs it to say when a number is not available. This matters more here
+than in most products: a hallucinated salary shown to a family making a three year
+financial decision is the one failure this tool could not survive.
+
+What it does:
+
+| Where | What it does |
+|---|---|
+| Any screen | Answers questions using only that family's computed figures |
+| Your details | Reads a plain sentence and fills the form from it |
+| Family concerns | Takes a worry in the family's own words and answers it with their numbers |
+| Your plan | Writes the summary paragraph for the printed plan |
+
+It replies in the language the family writes in, and accepts voice input where the
+browser supports it.
+
+**Everything works without it.** If no key is configured, or the service is unreachable,
+each entry point says so plainly and the rest of the screen carries on. The test suite
+asserts this.
+
+### Configuring it
+
+Keys live in the serverless function's environment and never reach the browser.
+
+1. Copy `.env.example` to `.env.local` and paste your keys in, comma separated:
+
+   ```
+   GEMINI_API_KEYS=key_one,key_two,key_three
+   ```
+
+   `.env.local` is gitignored. Never commit it.
+
+2. Run locally. The dev server loads that file and runs `api/chat.js` in process, so local
+   behaviour matches the deployment:
+
+   ```bash
+   node server.mjs
+   ```
+
+   It prints how many keys it loaded on startup.
+
+3. Deploy to Vercel, which is where the function actually runs:
+
+   ```bash
+   vercel login
+   vercel --prod
+   vercel env add GEMINI_API_KEYS production
+   ```
+
+Keys are rotated round robin, one per request. If a key returns a rate limit or an
+outage, the next one is tried automatically, so a single exhausted key does not take the
+assistant down during judging.
+
+### Static hosting
+
+GitHub Pages has no server, so the assistant is inert there. To point a static mirror at
+the Vercel deployment, add this to `index.html`:
+
+```html
+<meta name="kn-api" content="https://your-deployment.vercel.app">
+```
 
 ---
 
