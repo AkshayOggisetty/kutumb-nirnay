@@ -7,7 +7,7 @@ A six slide deck cannot carry reasoning. This report sets out why the problem wa
 way it was, what the software actually computes, where the data comes from, how every
 screen works, and what is still missing. It is written to be read start to finish.
 
-Working prototype: https://akshayoggisetty.github.io/kutumb-nirnay/
+Working prototype: https://kutumb-nirnay.vercel.app
 Landing page: https://akshayoggisetty.github.io/kutumb-nirnay-landing/
 Source: https://github.com/AkshayOggisetty/kutumb-nirnay
 

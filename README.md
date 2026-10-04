@@ -6,7 +6,7 @@ Most career advice speaks only to the student. Kutumb Nirnay is built for the ho
 the person who actually decides can see what a course costs, when the earning starts, how
 often it leads to a job, and which training centres the student can realistically reach.
 
-**Live:** https://akshayoggisetty.github.io/kutumb-nirnay/
+**Live:** https://kutumb-nirnay.vercel.app
 
 ---
 
