@@ -27,8 +27,10 @@ npm install                            # puppeteer-core, for the test driver onl
 node test/run.mjs http://localhost:8081
 ```
 
-60 interaction checks covering every route, every form control, the map, the charts, the
-plan, persistence and the reset path. The run fails if the browser logs any console error.
+79 interaction checks covering every route, every form control, the map, the charts, the
+plan, the assistant, persistence and the reset path. The run also asserts that every
+assistant entry point degrades gracefully when no key is configured. The run fails if the
+browser logs any unexpected console error.
 
 ---
 
@@ -177,7 +179,10 @@ js/
   ui/charts.js          inline SVG charts
   ui/map.js             the centre finder
   app.js                screens, routing and all interaction
-test/run.mjs            60 interaction checks
+  api/chat.js           serverless chat proxy, keys stay server side
+  core/ai.js            builds the grounded context from the engine
+  ui/chat.js            the assistant drawer
+test/run.mjs            79 interaction checks
 ```
 
 ---
